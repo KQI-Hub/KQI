@@ -1,4 +1,5 @@
 import itertools
+from random import randint
 
 from minidcttilemap import minidctmap
 from bittools import byte_to_boollist, boollist_to_int_var, mk_uintvar, generate_boollist
@@ -16,7 +17,48 @@ def generateheader(version, width, height, channelmode, colspace, xdblength):
     flags.append(False)
     flags = boollist_to_int_var(flags)
     head.append(flags)
-    return flags
+    if iscontainer:
+        xdblength.extend(mk_uintvar())
+    return head
+
+def convert_transforms(inversion, bshift, floor):
+    b1 = [inversion]
+    if bshift < 0:
+        bshift += 128
+    b1.extend(generate_boollist(bshift, 7))
+    b1 = boollist_to_int_var(b1)
+    b2 = floor
+    return bytes([b1, b2])
+
+def generate_minidct_tile(index, inversion: bool, bshift, floor):
+    bytesobject = bytearray()
+    base = [True, True]
+
+    if index > 63 or 0 > index:
+        raise ValueError("Invalid Tile! Range is 0 to 63")
+    #if bshift > 63 or -64 > bshift:
+    #    raise ValueError("Invalid Bitshift! Range is -64 to 63")
+    #if floor > 255 or 0 > floor:
+    #    raise ValueError("Invalid Floor! Range is 0 to 255")
+
+    base.extend(generate_boollist(index, 6))
+    base = boollist_to_int_var(base)
+    bytesobject.append(base)
+    if type(inversion) is tuple:
+        bytesobject.extend(convert_transforms(inversion[0], bshift[0], floor[0]))
+        bytesobject.extend(convert_transforms(inversion[1], bshift[1], floor[1]))
+        bytesobject.extend(convert_transforms(inversion[2], bshift[2], floor[2]))
+    else:
+        bytesobject.extend(convert_transforms(inversion, bshift, floor))
+    print(len(bytesobject))
+    return bytesobject
+
+def generator_is_my_name():
+    tfile = bytearray(b"KQIF")
+    tfile.extend(generateheader(0, 64, 64, 3, 1, 0))
+    for _ in range(64):
+        tfile.extend(generate_minidct_tile(randint(0, 63), (bool(randint(0, 1)), bool(randint(0, 1)), bool(randint(0, 1))), (randint(-2, 2), randint(-2, 2), randint(-2, 2)), (randint(0, 64), randint(0, 64), randint(0, 64))))
+    return bytes(tfile)
 
 def encode(bitmap: list):
     return b"KQIF"
