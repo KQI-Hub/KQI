@@ -88,8 +88,39 @@ def generator_is_my_name(width, height):
         tfile.extend(generate_minidct_tile(randint(0, 63), (bool(randint(0, 1)), bool(randint(0, 1)), bool(randint(0, 1))), (randint(-2, 2), randint(-2, 2), randint(-2, 2)), (randint(0, 64), randint(0, 64), randint(0, 64))))
     return bytes(tfile)
 
+def distance(a, b):
+    return sum((x - y) ** 2 for x, y in zip(a, b)) # calculates distance
+
+def tuplesofthree(inpt: list):
+    singlet = []
+    for tup in inpt:
+        singlet.append((tup[0]+tup[1]+tup[2])//3)
+    return singlet
+
 def encode(bitmap: list):
-    return b"KQIF"
+    kqi = bytearray(b"KQIF")
+    wid = len(bitmap[0])
+    hei = len(bitmap)
+    col = 1
+    if type(bitmap[0][0]) is tuple:
+        col = 3
+    kqi.extend(generateheader(0, wid, hei, col, 1, 0))
+    chmap = bitmap_to_chunkmap(bitmap)
+    for tile in chmap:
+        if col == 3:
+            tl = tuplesofthree(tile)
+            inv = (False, False, False)
+            bts = (0, 0, 0)
+            flr = (0, 0, 0)
+        else:
+            tl = tile
+            inv = False
+            bts = 0
+            flr = 0
+        diff = diffmap(tl)
+        closest = min(minidctdiffmap, key=lambda x: distance(diff, x)) # finds closest tile
+        kqi.extend(generate_minidct_tile(minidctdiffmap.index(closest), inv, bts, flr))
+    return bytes(kqi)
 
 def parseheader(header: bytes):
     version = header[0]
