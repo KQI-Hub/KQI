@@ -1,8 +1,9 @@
 import itertools
 from random import randint
 
-from minidcttilemap import minidctmap
+from minidcttilemap import minidctmap, minidctdiffmap
 from bittools import byte_to_boollist, boollist_to_int_var, mk_uintvar, generate_boollist
+from diffmap import diffmap
 
 def generateheader(version, width, height, channelmode, colspace, xdblength):
     iscontainer = bool(xdblength)
@@ -20,6 +21,28 @@ def generateheader(version, width, height, channelmode, colspace, xdblength):
     if iscontainer:
         xdblength.extend(mk_uintvar())
     return head
+
+def bitmap_to_chunkmap(bmp: list):
+    chunkmap = []
+    rows = len(bmp)
+    rows = (rows+7) //8 # amount of rows of chunks
+    cols = len(bmp[0])
+    cols = (cols+7) //8 # amount of chunks per row
+    tiles = rows*cols
+    for t in range(tiles):
+        chunkmap.append([])
+        crow = t%cols
+        ccol = t//cols
+        for i in range(8):
+            for l in range(8):
+                pxc = (ccol*8)+i
+                pxr = crow*8+l
+                if len(bmp) <= pxc:
+                    pxc = -1
+                if len(bmp[0]) <= pxr:
+                    pxr = -1
+                chunkmap[t].append(bmp[pxc][pxr])
+    return chunkmap
 
 def convert_transforms(inversion, bshift, floor):
     b1 = [inversion]
@@ -50,13 +73,18 @@ def generate_minidct_tile(index, inversion: bool, bshift, floor):
         bytesobject.extend(convert_transforms(inversion[2], bshift[2], floor[2]))
     else:
         bytesobject.extend(convert_transforms(inversion, bshift, floor))
-    print(len(bytesobject))
     return bytesobject
 
-def generator_is_my_name():
+def calculate_tile_count(n, p):
+    n = (n+bool(n % 8)) //8
+    p = (p+bool(p % 8)) //8
+    return n*p
+
+def generator_is_my_name(width, height):
     tfile = bytearray(b"KQIF")
-    tfile.extend(generateheader(0, 64, 64, 3, 1, 0))
-    for _ in range(64):
+    tfile.extend(generateheader(0, width, height, 3, 1, 0))
+    tc = calculate_tile_count(width, height)
+    for _ in range(tc):
         tfile.extend(generate_minidct_tile(randint(0, 63), (bool(randint(0, 1)), bool(randint(0, 1)), bool(randint(0, 1))), (randint(-2, 2), randint(-2, 2), randint(-2, 2)), (randint(0, 64), randint(0, 64), randint(0, 64))))
     return bytes(tfile)
 
