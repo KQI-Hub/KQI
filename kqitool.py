@@ -94,7 +94,7 @@ def distance(a, b):
 def tuplesofthree(inpt: list): # this creates a grayscale composite of the tile
     singlet = []
     for tup in inpt:
-        singlet.append((tup[0]+tup[1]+tup[2])//3)
+        singlet.append((tup[0]+tup[1]+tup[1]+tup[2])//4)
     return singlet
 
 def channelslice(rgb: list): # turns rgb color list into 3 lists
@@ -108,8 +108,8 @@ def channelslice(rgb: list): # turns rgb color list into 3 lists
     return r, g, b
 
 def minlow(l: list):
-    sorted(l)[8]
-    return l[8]
+    sorted(l)[6]
+    return l[6]
 
 def whatever(r: list, flr: int = 0):
     sr = sorted(r)
@@ -121,15 +121,40 @@ def whatever(r: list, flr: int = 0):
 
 def errordct(tile: list, dtile: list):
     totalerror = 0
-    for i in range(len(tile)):
-        totalerror += distance(tile[i], dtile[i])
+    totalerror += distance(tile, dtile)
     return totalerror
 
+def checkparams(tile: list, inv: bool, tid: int, bit: int, flor: int):
+    gentile = tiletransform(minidctmap[tid], inv, bit, flor)
+    error = errordct(tile, gentile)
+    return error
+
+def BRUTE_FORCE(src: list, flor: int): # brute force best base tile for grayscale image
+    best_error = float('inf')
+    best_tile = None
+    for inv in (False, True):
+        for bit in (-2, 0, 2):
+            for tile in range(64):
+                error = checkparams(src, inv, tile, bit, flor)
+                if error < best_error:
+                    best_error = error
+                    best_tile = tile
+    return best_tile
+
+def brute_force_2_electric_boogaloo(src: list, flor: int, tid: int): # brute force best params per tile
+    best_error = float('inf')
+    best_params = (None, None) # format: invert, bitshift
+    for inv in (False, True):
+        for bit in range(-9, 10):
+            error = checkparams(src, inv, tid, bit, flor)
+            if error < best_error:
+                best_error = error
+                best_params = (inv, bit)
+
+    return best_params
+
 def avg(inp: list):
-    val = 0
-    for entry in inp:
-        val += entry
-    return val//len(inp)
+    return sum(inp)//len(inp)
 
 def encode(bitmap: list):
     kqi = bytearray(b"KQIF")
@@ -144,17 +169,21 @@ def encode(bitmap: list):
         if col == 3:
             r, g, b = channelslice(tile)
             tl = tuplesofthree(tile)
-            inv = ((avg(r)<192), (avg(g)<192), (avg(b)<192))
-            flr = (minlow(r), minlow(g), minlow(b))
-            bts = (whatever(r, flr[0]), whatever(g, flr[1]), whatever(b, flr[2]))
+            besttile = BRUTE_FORCE(tuplesofthree(tile), minlow(tl))
+            rf = minlow(r)
+            ri, rb = brute_force_2_electric_boogaloo(r, rf, besttile)
+            gf = minlow(g)
+            gi, gb = brute_force_2_electric_boogaloo(g, gf, besttile)
+            bf = minlow(b)
+            bi, bb = brute_force_2_electric_boogaloo(b, bf, besttile)
+            inv = (ri, gi, bi)
+            bts = (rb, gb, bb)
+            flr = (rf, gf, bf)
         else:
             tl = tile
-            inv = (tile<127)
-            flr = minlow(tile)
-            bts = whatever(tile, flr)
-        diff = diffmap(tl)
-        closest = min(minidctdiffmap, key=lambda x: distance(diff, x)) # finds closest tile
-        kqi.extend(generate_minidct_tile(minidctdiffmap.index(closest), inv, bts, flr))
+            besttile = BRUTE_FORCE(tile, minlow(tl))
+
+        kqi.extend(generate_minidct_tile(besttile, inv, bts, flr))
     return bytes(kqi)
 
 def parseheader(header: bytes):
