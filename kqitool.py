@@ -89,13 +89,47 @@ def generator_is_my_name(width, height):
     return bytes(tfile)
 
 def distance(a, b):
-    return sum((x - y) ** 2 for x, y in zip(a, b)) # calculates distance
+    return sum(abs(x-y) for x, y in zip(a, b)) # calculates distance
 
-def tuplesofthree(inpt: list):
+def tuplesofthree(inpt: list): # this creates a grayscale composite of the tile
     singlet = []
     for tup in inpt:
         singlet.append((tup[0]+tup[1]+tup[2])//3)
     return singlet
+
+def channelslice(rgb: list): # turns rgb color list into 3 lists
+    r = []
+    g = []
+    b = []
+    for px in rgb:
+        r.append(px[0])
+        g.append(px[1])
+        b.append(px[2])
+    return r, g, b
+
+def minlow(l: list):
+    sorted(l)[8]
+    return l[8]
+
+def whatever(r: list, flr: int = 0):
+    sr = sorted(r)
+    r25 = sr[15]
+    r75 = sr[47]
+    rd = r75-r25
+    rb = rd//128
+    return rb
+
+def errordct(tile: list, dtile: list):
+    totalerror = 0
+    for i in range(len(tile)):
+        totalerror += distance(tile[i], dtile[i])
+    return totalerror
+
+def avg(inp: list):
+    val = 0
+    for entry in inp:
+        val += entry
+    return val//len(inp)
 
 def encode(bitmap: list):
     kqi = bytearray(b"KQIF")
@@ -108,15 +142,16 @@ def encode(bitmap: list):
     chmap = bitmap_to_chunkmap(bitmap)
     for tile in chmap:
         if col == 3:
+            r, g, b = channelslice(tile)
             tl = tuplesofthree(tile)
-            inv = (False, False, False)
-            bts = (0, 0, 0)
-            flr = (0, 0, 0)
+            inv = ((avg(r)<192), (avg(g)<192), (avg(b)<192))
+            flr = (minlow(r), minlow(g), minlow(b))
+            bts = (whatever(r, flr[0]), whatever(g, flr[1]), whatever(b, flr[2]))
         else:
             tl = tile
-            inv = False
-            bts = 0
-            flr = 0
+            inv = (tile<127)
+            flr = minlow(tile)
+            bts = whatever(tile, flr)
         diff = diffmap(tl)
         closest = min(minidctdiffmap, key=lambda x: distance(diff, x)) # finds closest tile
         kqi.extend(generate_minidct_tile(minidctdiffmap.index(closest), inv, bts, flr))
