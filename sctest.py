@@ -1,6 +1,6 @@
 import scqoi
 
-fn = "blobby.txt"
+fn = "compressed_residual.bin"
 thisfile = open(fn, 'rb').read()
 
 open(f'{fn}.scq', "wb").write(scqoi.compress(thisfile))

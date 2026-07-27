@@ -43,3 +43,6 @@ def generate_boollist(dat: int, ln: int):
         else:
             boollist.append(False)
     return boollist
+
+def intclamp(inpt):
+    return int(inpt) % 256

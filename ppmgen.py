@@ -90,3 +90,12 @@ def ppm_to_list(data: bytes):
                 bitmap[h].append(( bmpmap[ligma*3] , bmpmap[(ligma*3)+1] , bmpmap[(ligma*3)+2] ))
     
     return bitmap
+
+def blank_bitmap_list(width, height):
+    frame = []
+    blankline = []
+    for _ in range(width):
+        blankline.append(None)
+    for _ in range(height):
+        frame.append(blankline[:])
+    return frame
