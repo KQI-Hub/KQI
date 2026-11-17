@@ -1,2 +1,2 @@
 # KQI
-KQ Image
+KQI Image Format
