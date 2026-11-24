@@ -55,4 +55,5 @@ dimg_cg = chunkmap_to_bitmap(cdimg, img_w, img_h)
 dimg = ycocg_r_to_rgb(dimg_y, dimg_co, dimg_cg)
 
 #open("sunsety.pgm", "wb").write(pgm_from_list(dimg_y))
+open("sunsetco.pgm", "wb").write(pgm_from_list(dimg_co))
 open("sunset.ppm", "wb").write(ppm_from_list(dimg))

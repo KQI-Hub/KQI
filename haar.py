@@ -47,4 +47,4 @@ compand_lut = [
 ]
 
 def compand(n):
-    return compand_lut[max(0, min(1020, n + 510))]
+    return compand_lut[clamp(n+510, 0, 1020)]
