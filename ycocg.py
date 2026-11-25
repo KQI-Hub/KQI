@@ -1,12 +1,13 @@
 companded_table = [-255, -251, -247, -243, -239, -235, -231, -227, -223, -219, -215, -211, -207, -203, -199, -195, -191, -187, -183, -179, -175, -171, -167, -163, -159, -157, -155, -153, -151, -149, -147, -145, -143, -141, -139, -137, -135, -133, -131, -129, -127, -125, -123, -121, -119, -117, -115, -113, -111, -109, -107, -105, -103, -101, -99, -97, -95, -93, -91, -89, -87, -85, -83, -81, -79, -77, -75, -73, -71, -69, -67, -65, -63, -61, -59, -57, -55, -53, -51, -49, -48, -47, -46, -45, -44, -43, -42, -41, -40, -39, -38, -37, -36, -35, -34, -33, -32, -31, -30, -29, -28, -27, -26, -25, -24, -23, -22, -21, -20, -19, -18, -17, -16, -15, -14, -13, -12, -11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124, 126, 128, 130, 132, 134, 136, 138, 140, 142, 144, 146, 148, 150, 152, 154, 156, 158, 162, 166, 170, 174, 178, 182, 186, 190, 194, 198, 202, 206, 210, 214, 218, 222, 226, 230, 234, 238, 242, 246, 250, 255]
 
-def rgb_to_ycocg_r(img: list):
+def rgb_to_ycocg_r(img: list, subsample=False):
     y, co, cg = [], [], []
-    for row in img:
+    for i, row in enumerate(img):
         y.append([])
-        co.append([])
-        cg.append([])
-        for px in row:
+        if not subsample or not i%2:
+            co.append([])
+            cg.append([])
+        for ii, px in enumerate(row):
             R, G, B = px[0], px[1], px[2]
             Co = R - B
             tmp = B + Co//2
@@ -18,18 +19,23 @@ def rgb_to_ycocg_r(img: list):
             Cg = compand(Cg)
 
             y[-1].append(Y)
-            co[-1].append(Co)
-            cg[-1].append(Cg)
+            if not subsample or not (i%2 or ii%2):
+                co[-1].append(Co)
+                cg[-1].append(Cg)
     return y, co, cg
 
-def ycocg_r_to_rgb(y: list, co: list, cg: list, al: list = None):
+def ycocg_r_to_rgb(y: list, co: list, cg: list, al: list = None, subsampled=False):
     img = []
     for rwi in range(len(y)):
         img.append([])
         for pxi in range(len(y[0])):
             Y = y[rwi][pxi]
-            Co = companded_table[co[rwi][pxi]]
-            Cg = companded_table[cg[rwi][pxi]]
+            if subsampled:
+                Co = companded_table[co[rwi//2][pxi//2]]
+                Cg = companded_table[cg[rwi//2][pxi//2]]
+            else:
+                Co = companded_table[co[rwi][pxi]]
+                Cg = companded_table[cg[rwi][pxi]]
 
             tmp = Y - Cg//2
             G = Cg + tmp

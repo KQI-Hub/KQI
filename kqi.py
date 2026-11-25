@@ -13,7 +13,7 @@ from chunking import bitmap_to_chunkmap, chunkmap_to_bitmap, flat_bitmap_to_chun
 from huffman import huffman_enc, huffman_dec # whatever. mari make huffman a drop-in easy thing later pls
 from scqoi2 import compress, decompress
 
-from ppmgen import pam_from_list, ppm_from_list, pgm_from_list, ppm_to_list, pgm_from_flat_list, get_alpha, gal_pack # pgm/ppm support
+from ppmgen import pam_from_list, ppm_from_list, pgm_from_list, ppm_to_list, get_alpha, gal_pack # pgm/ppm support
 from qoicom import encode as qoi_enc, decode as qoi_dec # qoi support
 
 def kqi_haar_plane(channel, img_w, img_h, img_hw, img_hh):
@@ -68,16 +68,22 @@ def make_alpha_chunk(ctype: str, plane: bytes):
     chk.extend(cdata)
     return chk
 
-def encode(src_img, alpha = True):
+def encode(src_img, alpha = True, subsample = False):
     bits = bytearray(b'kqif') # kqif header bytes 0-3
     # get dimensions
     img_w = len(src_img[0])
     img_h = len(src_img)
     img_hw, img_hh = (img_w+1)//2, (img_h+1)//2
+    if subsample:
+        cimg_w, cimg_h = img_hw, img_hh
+        cimg_hw, cimg_hh = (img_hw+1)//2, (img_hh+1)//2
+    else:
+        cimg_w, cimg_h, cimg_hw, cimg_hh = img_w, img_h, img_hw, img_hh
 
     bits.extend(img_w.to_bytes(4, 'little')) # width, bytes 4-7
     bits.extend(img_h.to_bytes(4, 'little')) # height, bytes 8-11
 
+    grayscale = False
     if type(src_img[0][0]) == int:
         grayscale = True
         if alpha is True:
@@ -99,7 +105,7 @@ def encode(src_img, alpha = True):
     bits.append(channels) # channels count, byte 12
 
     bits.append(0) # colorspace, 0=sRGB+lA; 1=lRGBA; 2=ICC Chunk, byte 13
-    bits.append(0) # subsampling mode, 0=4:4:4, 1=4:2:0; byte 14
+    bits.append(int(subsample)) # subsampling mode, 0=4:4:4, 1=4:2:0; byte 14
     bits.append(0) # reserved/padding, byte 15
 
     bits.extend(make_text_chunk("C", datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")))
@@ -110,16 +116,16 @@ def encode(src_img, alpha = True):
     if grayscale:
         img_y = src_img
     else:
-        img_y, img_co, img_cg = rgb_to_ycocg_r(src_img)
+        img_y, img_co, img_cg = rgb_to_ycocg_r(src_img, subsample=subsample)
 
     # transform to haar stuffs -- note: please make it support grayscale later
     # yss, ysh, ysv, ysd, yh, yv, yd
     y_sb = kqi_haar_plane(img_y, img_w, img_h, img_hw, img_hh)
     if not grayscale:
         # coss, cosh, cosv, cosd, coh, cov, cod
-        co_sb = kqi_haar_plane(img_co, img_w, img_h, img_hw, img_hh)
+        co_sb = kqi_haar_plane(img_co, cimg_w, cimg_h, cimg_hw, cimg_hh)
         # cgss, cgsh, cgsv, cgsd, cgh, cgv, cgd
-        cg_sb = kqi_haar_plane(img_cg, img_w, img_h, img_hw, img_hh)
+        cg_sb = kqi_haar_plane(img_cg, cimg_w, cimg_h, cimg_hw, cimg_hh)
 
     if alpha:
         bits.extend(make_alpha_chunk("L", img_a))
@@ -142,11 +148,18 @@ def decode(kqi_bytes: bytes):
     img_w = int.from_bytes(kqi_bytes[4:8], "little")
     img_h = int.from_bytes(kqi_bytes[8:12], "little")
     channels = kqi_bytes[12]
+    is_subsampled = bool(kqi_bytes[14])
     iscolor = channels > 2
 
     img_hw, img_hh = (img_w+1)//2, (img_h+1)//2
     y_sb, co_sb, cg_sb = [None]*7, [None]*7, [None]*7
     alph = None
+
+    if is_subsampled:
+        cimg_w, cimg_h = img_hw, img_hh
+        cimg_hw, cimg_hh = (img_hw+1)//2, (img_hh+1)//2
+    else:
+        cimg_w, cimg_h, cimg_hw, cimg_hh = img_w, img_h, img_hw, img_hh
 
     bw = 16 # start at the start of the 1st chunk
     while True:
@@ -182,27 +195,27 @@ def decode(kqi_bytes: bytes):
 
     if iscolor:
         cods = unhaar_plane(co_sb[0], co_sb[1], co_sb[2], co_sb[3])
-        cods = flatten(chunkmap_to_bitmap(cods, img_hw, img_hh))
+        cods = flatten(chunkmap_to_bitmap(cods, cimg_hw, cimg_hh))
         cdimg = unhaar_plane(cods, co_sb[4], co_sb[5], co_sb[6])
-        dimg_co = chunkmap_to_bitmap(cdimg, img_w, img_h)
+        dimg_co = chunkmap_to_bitmap(cdimg, cimg_w, cimg_h)
 
         cgds = unhaar_plane(cg_sb[0], cg_sb[1], cg_sb[2], cg_sb[3])
-        cgds = flatten(chunkmap_to_bitmap(cgds, img_hw, img_hh))
+        cgds = flatten(chunkmap_to_bitmap(cgds, cimg_hw, cimg_hh))
         cdimg = unhaar_plane(cgds, cg_sb[4], cg_sb[5], cg_sb[6])
-        dimg_cg = chunkmap_to_bitmap(cdimg, img_w, img_h)
+        dimg_cg = chunkmap_to_bitmap(cdimg, cimg_w, cimg_h)
 
-        return ycocg_r_to_rgb(dimg_y, dimg_co, dimg_cg, alph)
+        return ycocg_r_to_rgb(dimg_y, dimg_co, dimg_cg, alph, subsampled=is_subsampled)
     elif channels == 2:
         return gal_pack(dimg_y, alph)
     else:
         return dimg_y
 
 # encoding
-#src_img = ppm_to_list(open("sunset.pgm", "rb").read())
-#kqi = encode(src_img, src_img)
-#open("sunset_gray_funny.kqi", "wb").write(kqi)
+#src_img = qoi_dec(open("sunset.qoi", "rb").read())
+#kqi = encode(src_img, alpha=False, subsample=True)
+#open("sunset_subsamp.kqi", "wb").write(kqi)
 
 # decoding
-kqi = open("sunset_gray_funny.kqi", "rb").read()
+kqi = open("sunset_subsamp.kqi", "rb").read()
 dimg = decode(kqi)
-open("sunset_gray_funny.pam", "wb").write(pam_from_list(dimg))
+open("sunset_subsamp.pam", "wb").write(pam_from_list(dimg))
