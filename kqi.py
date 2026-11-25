@@ -184,7 +184,7 @@ def decode(kqi_bytes: bytes, *, verbose = False):
             if verbose:
                 print('sG chunk found, subband:', sbid, 'length:', chk_len)
             cg_sb[sbid] = decompress(huffman_dec(kqi_bytes[bw+9:bw+8+chk_len]))
-        elif TwoCC == b'aL':
+        elif TwoCC == b'aL' and channels%2 == 0:
             if verbose:
                 print('aL chunk found, length:', chk_len)
             alph = decompress(huffman_dec(kqi_bytes[bw+8:bw+8+chk_len]))
