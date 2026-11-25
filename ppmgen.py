@@ -53,9 +53,17 @@ def pgm_from_list(bitmap, desc = None):
     pgmhead += f"{len(bitmap[0])} {len(bitmap)}\n"
     pgmhead += "255\n"
 
+    down = False
+    if type(bitmap[0][0]) != int:
+        print("Warn: Downsampling to Grayscale...")
+        down = True
+
     for row in bitmap:
         for pixel in row:
-            pgmbody.append(pixel)
+            if down:
+                pgmbody.append((pixel[0]+pixel[1]+pixel[1]+pixel[2])//4)
+            else:
+                pgmbody.append(pixel)
 
     return pgmhead.encode() + bytes(pgmbody)
 
