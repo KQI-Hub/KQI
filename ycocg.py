@@ -22,7 +22,7 @@ def rgb_to_ycocg_r(img: list):
             cg[-1].append(Cg)
     return y, co, cg
 
-def ycocg_r_to_rgb(y: list, co: list, cg: list):
+def ycocg_r_to_rgb(y: list, co: list, cg: list, al: list = None):
     img = []
     for rwi in range(len(y)):
         img.append([])
@@ -40,7 +40,10 @@ def ycocg_r_to_rgb(y: list, co: list, cg: list):
             G = max(0, min(255, G))
             B = max(0, min(255, B))
 
-            img[-1].append((R,G,B))
+            if al:
+                img[-1].append((R,G,B,al[(len(y)*rwi)+pxi]))
+            else:
+                img[-1].append((R,G,B))
     return img
 
 def clamp(i, m, n):

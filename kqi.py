@@ -13,7 +13,7 @@ from chunking import bitmap_to_chunkmap, chunkmap_to_bitmap, flat_bitmap_to_chun
 from huffman import huffman_enc, huffman_dec # whatever. mari make huffman a drop-in easy thing later pls
 from scqoi2 import compress, decompress
 
-from ppmgen import pam_from_list, ppm_from_list, pgm_from_list, ppm_to_list, pgm_from_flat_list # pgm/ppm support
+from ppmgen import pam_from_list, ppm_from_list, pgm_from_list, ppm_to_list, pgm_from_flat_list, get_alpha # pgm/ppm support
 from qoicom import encode as qoi_enc, decode as qoi_dec # qoi support
 
 def kqi_haar_plane(channel, img_w, img_h, img_hw, img_hh):
@@ -54,7 +54,21 @@ def make_subband_chunk(ctype: str, plane: bytes, subband: int):
     chk.extend(cdata)
     return chk
 
-def encode(src_img):
+def make_alpha_chunk(ctype: str, plane: bytes):
+    if len(ctype) != 1:
+        raise ValueError("Chunk Type must be exactly 1!")
+    chk = bytearray(f'a{ctype}'.encode('ascii'))
+
+    plane = bytes(flatten(plane))
+
+    scq2plane = compress(plane, do_diff=False) # scQOI2 compression
+    cdata = huffman_enc(scq2plane) # Huffman coding
+
+    chk.extend(len(cdata).to_bytes(6, 'little'))
+    chk.extend(cdata)
+    return chk
+
+def encode(src_img, alpha: bool = True):
     bits = bytearray(b'kqif') # kqif header bytes 0-3
     # get dimensions
     img_w = len(src_img[0])
@@ -63,7 +77,18 @@ def encode(src_img):
 
     bits.extend(img_w.to_bytes(4, 'little')) # width, bytes 4-7
     bits.extend(img_h.to_bytes(4, 'little')) # height, bytes 8-11
-    bits.append(3) # channels count, byte 12
+
+    img_a = None
+    if alpha:
+        img_a = get_alpha(src_img)
+    if not img_a:
+        alpha = False # disable alpha if it doesnt exist
+
+    if alpha: # channels count, byte 12
+        bits.append(4)
+    else:
+        bits.append(3) 
+
     bits.append(0) # colorspace, 0=sRGB+lA; 1=lRGBA; 2=ICC Chunk, byte 13
     bits.append(0) # subsampling mode, 0=4:4:4, 1=4:2:0; byte 14
     bits.append(0) # reserved/padding, byte 15
@@ -83,6 +108,9 @@ def encode(src_img):
     # cgss, cgsh, cgsv, cgsd, cgh, cgv, cgd
     cg_sb = kqi_haar_plane(img_cg, img_w, img_h, img_hw, img_hh)
 
+    if alpha:
+        bits.extend(make_alpha_chunk("L", img_a))
+
     for sbt, (sby, sbco, sbcg) in enumerate(zip(y_sb, co_sb, cg_sb)):
         bits.extend(make_subband_chunk("Y", sby, sbt))
         bits.extend(make_subband_chunk("O", sbco, sbt))
@@ -98,6 +126,7 @@ def decode(kqi_bytes: bytes):
     img_h = int.from_bytes(kqi_bytes[8:12], "little")
     img_hw, img_hh = (img_w+1)//2, (img_h+1)//2
     y_sb, co_sb, cg_sb = [None]*7, [None]*7, [None]*7
+    alph = None
 
     bw = 16 # start at the start of the 1st chunk
     while True:
@@ -120,6 +149,9 @@ def decode(kqi_bytes: bytes):
             sbid = kqi_bytes[bw+8]
             print('sG chunk found, subband:', sbid, 'length:', chk_len)
             cg_sb[sbid] = decompress(huffman_dec(kqi_bytes[bw+9:bw+8+chk_len]))
+        elif TwoCC == b'aL':
+            print('aL chunk found, length:', chk_len)
+            alph = decompress(huffman_dec(kqi_bytes[bw+8:bw+8+chk_len]))
         else:
             print(TwoCC, chk_len) # simply print unknown chunk statistics
         bw+=chk_len+8
@@ -138,14 +170,14 @@ def decode(kqi_bytes: bytes):
     cdimg = unhaar_plane(cgds, cg_sb[4], cg_sb[5], cg_sb[6])
     dimg_cg = chunkmap_to_bitmap(cdimg, img_w, img_h)
 
-    return ycocg_r_to_rgb(dimg_y, dimg_co, dimg_cg)
+    return ycocg_r_to_rgb(dimg_y, dimg_co, dimg_cg, alph)
 
 # encoding
-src_img = qoi_dec(open("sunset.qoi", "rb").read())
-kqi = encode(src_img)
-open("sunset_nodiff.kqi", "wb").write(kqi)
+#src_img = qoi_dec(open("kagari.qoi", "rb").read())
+#kqi = encode(src_img)
+#open("kagari.kqi", "wb").write(kqi)
 
 # decoding
-#kqi = open("sunset_nodiff.kqi", "rb").read()
-#dimg = decode(kqi)
-#open("sunset.ppm", "wb").write(ppm_from_list(dimg))
+kqi = open("kagari.kqi", "rb").read()
+dimg = decode(kqi)
+open("kagari.pam", "wb").write(pam_from_list(dimg))

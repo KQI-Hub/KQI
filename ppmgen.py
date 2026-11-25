@@ -114,3 +114,14 @@ def pgm_from_flat_list(bitmap, wid, hei):
             ppmbody.append(pixel)
 
     return ppmhead.encode() + bytes(ppmbody)
+
+def get_alpha(image):
+    alph = []
+    for row in image:
+        alph.append([])
+        for px in row:
+            if len(px) > 3:
+                alph[-1].append(px[3])
+            else:
+                return False
+    return alph
