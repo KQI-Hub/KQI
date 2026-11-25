@@ -1,4 +1,4 @@
-![KQI Logo](KQI-Logo.svg) &nbsp;&nbsp;&nbsp;&nbsp; ![KMI Logo](KMI-Logo.svg)
+![KQI Logo](KQI-Logo.svg) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ![KMI Logo](KMI-Logo.svg)
 # KQ Image & KQI Model for Images (KMI)
 
 # KQI
