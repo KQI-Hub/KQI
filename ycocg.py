@@ -47,7 +47,7 @@ def clamp(i, m, n):
     return min(max(i, m), n)
 
 compand_lut = [
-    min(range(256), key=lambda i: abs(companded_table[i] - n))
+    min(range(256),key=lambda i: (abs(companded_table[i] - n), abs(companded_table[i])))
     for n in range(-255, 256)
 ]
 

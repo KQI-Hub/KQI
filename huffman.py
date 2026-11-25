@@ -1,4 +1,5 @@
 import heapq
+import bittools
 
 class Node:
     def __init__(self, symbol=None, frequency=None, left=None, right=None):
@@ -10,11 +11,28 @@ class Node:
     def __lt__(self, other):
         return self.frequency < other.frequency
 
-def huffman_enc(bytes):
-    pass
+def huffman_enc(cbytes):
+    huff_bytes = bytearray() # initialize output bytearray
+    freq = freq_eval(cbytes, True) # make byte frequency table
+    root = build_huffman_tree(freq) # build huffman tree from frequency table
+    huffman_codes = generate_huffman_codes(root) # generate codes from huffman tree
+    nodes = serialize(root) # serializes the huffman tree's root
+    hufftree = serial_to_squeeze_tree(nodes, len(huffman_codes)) # serializes the rest of the tree
+    huff_bytes.extend(hufftree) # adds huffman tree to output
+    cdat = huffman_encode(cbytes, huffman_codes) # encodes the data with the tree
+    huff_bytes.extend(cdat) # adds huffman coded data to output
 
-def huffman_dec(bytes):
-    pass
+    return huff_bytes
+
+def huffman_dec(cbytes):
+    huffsize = cbytes[0]+cbytes[1]*256 # get tree size
+    seek=2 # seek at tree start
+    hufftree = cbytes[seek:seek+(huffsize*4)] # extract tree
+    seek+=(huffsize*4) # seek at codepoints start
+    huffman_points = huffman_decode(hufftree) # get huffman code points
+    dec_bytes = dehuffman(cbytes[seek:], huffman_points) # decode the data with the tree
+
+    return dec_bytes
 
 def serialize(node: huffman.Node, nodes=None):
     parent = False
