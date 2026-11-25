@@ -125,3 +125,11 @@ def get_alpha(image):
             else:
                 return False
     return alph
+
+def gal_pack(graymap, alphamap):
+    out = []
+    for rwi, row in enumerate(graymap):
+        out.append([])
+        for pxi, px in enumerate(row):
+            out[-1].append((px, px, px, alphamap[(len(graymap[0])*rwi)+pxi]))
+    return out
