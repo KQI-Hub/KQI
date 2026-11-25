@@ -141,7 +141,7 @@ def encode(src_img, *, alpha = True, subsample = False):
     bits.extend(b'eF') # EoF Marker
     return bits
 
-def decode(kqi_bytes: bytes):
+def decode(kqi_bytes: bytes, *, verbose = False):
     if kqi_bytes[0:4] != b'kqif':
         raise ValueError("Not a KQI Image!")
     img_w = int.from_bytes(kqi_bytes[4:8], "little")
@@ -171,21 +171,26 @@ def decode(kqi_bytes: bytes):
         chk_len = int.from_bytes(kqi_bytes[bw+2:bw+8], "little")
         if TwoCC == b'sY':
             sbid = kqi_bytes[bw+8]
-            print('sY chunk found, subband:', sbid, 'length:', chk_len)
+            if verbose:
+                print('sY chunk found, subband:', sbid, 'length:', chk_len)
             y_sb[sbid] = decompress(huffman_dec(kqi_bytes[bw+9:bw+8+chk_len]))
         elif TwoCC == b'sO':
             sbid = kqi_bytes[bw+8]
-            print('sO chunk found, subband:', sbid, 'length:', chk_len)
+            if verbose:
+                print('sO chunk found, subband:', sbid, 'length:', chk_len)
             co_sb[sbid] = decompress(huffman_dec(kqi_bytes[bw+9:bw+8+chk_len]))
         elif TwoCC == b'sG':
             sbid = kqi_bytes[bw+8]
-            print('sG chunk found, subband:', sbid, 'length:', chk_len)
+            if verbose:
+                print('sG chunk found, subband:', sbid, 'length:', chk_len)
             cg_sb[sbid] = decompress(huffman_dec(kqi_bytes[bw+9:bw+8+chk_len]))
         elif TwoCC == b'aL':
-            print('aL chunk found, length:', chk_len)
+            if verbose:
+                print('aL chunk found, length:', chk_len)
             alph = decompress(huffman_dec(kqi_bytes[bw+8:bw+8+chk_len]))
         else:
-            print(TwoCC, chk_len) # simply print unknown chunk statistics
+            if verbose:
+                print(TwoCC, chk_len) # simply print unknown chunk statistics
         bw+=chk_len+8
     yds = unhaar_plane(y_sb[0], y_sb[1], y_sb[2], y_sb[3])
     yds = flatten(chunkmap_to_bitmap(yds, img_hw, img_hh))
