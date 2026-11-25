@@ -11,8 +11,8 @@ KMI: "KQI Model for Images" (KQI Reference Software) encoder (ckqi)
 
 from kqi import VER, encode, decode
 
-from ppmgen import pam_from_list, ppm_from_list, pgm_from_list, ppm_to_list, get_alpha, gal_pack # pgm/ppm support
-from qoicom import encode as qoi_enc, decode as qoi_dec # qoi support
+from ppmgen import ppm_to_list # pgm/ppm support
+from qoicom import decode as qoi_dec # qoi support
 
 import sys
 
@@ -22,7 +22,7 @@ if len(sys.argv) < 3:
     print(f"""
 USAGE: {sys.argv[0]} input.[ppm/qoi/kqi] output.kqi [options...]
  INPUT
-    the input can be KQI, PPM, PNM, QOI
+    the input can be KQI, PPM, PGM, QOI
  OUTPUT
     the compressed KQI output file
 
