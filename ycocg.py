@@ -2,9 +2,13 @@ companded_table = [-255, -251, -247, -243, -239, -235, -231, -227, -223, -219, -
 
 def rgb_to_ycocg_r(img: list, subsample=False):
     y, co, cg = [], [], []
+    co_tmp, cg_tmp = [], []
     for i, row in enumerate(img):
         y.append([])
-        if not subsample or not i%2:
+        if subsample:
+            co_tmp.append([])
+            cg_tmp.append([])
+        if not subsample:
             co.append([])
             cg.append([])
         for ii, px in enumerate(row):
@@ -19,9 +23,36 @@ def rgb_to_ycocg_r(img: list, subsample=False):
             Cg = compand(Cg)
 
             y[-1].append(Y)
-            if not subsample or not (i%2 or ii%2):
+            if subsample:
+                co_tmp[-1].append(Co)
+                cg_tmp[-1].append(Cg)
+            else:
                 co[-1].append(Co)
                 cg[-1].append(Cg)
+    if subsample:
+        h = len(y)
+        w = len(y[0])
+        ho = h%2
+        wo = w%2
+        for py in range(h):
+            if not py%2:
+                co.append([])
+                cg.append([])
+            for x in range(w):
+                if not x%2 + py%2:
+                    co_pot = [co_tmp[py][x]]
+                    cg_pot = [cg_tmp[py][x]]
+                    if not (wo and x == w-1):
+                        co_pot.append(co_tmp[py][x+1])
+                        cg_pot.append(cg_tmp[py][x+1])
+                    if not (ho and py == h-1):
+                        co_pot.append(co_tmp[py+1][x])
+                        cg_pot.append(cg_tmp[py+1][x])
+                    if not (ho and py == h-1) and not (wo and x == w-1):
+                        co_pot.append(co_tmp[py+1][x+1])
+                        cg_pot.append(cg_tmp[py+1][x+1])
+                    co[-1].append(round((sum(co_pot))/len(co_pot)))
+                    cg[-1].append(round((sum(cg_pot))/len(cg_pot)))
     return y, co, cg
 
 def ycocg_r_to_rgb(y: list, co: list, cg: list, al: list = None, subsampled=False):
