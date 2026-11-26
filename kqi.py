@@ -121,7 +121,7 @@ def encode(src_img, quality: int = 80, *, alpha = True, subsample = False):
     else:
         img_y, img_co, img_cg = rgb_to_ycocg_r(src_img, subsample=subsample)
 
-    qual_div = 100 / quality
+    qual_div = (100 / quality)**1.8 # adjust curve to be more.. curved
     qd_coeff = qual_div-1
     y_w = 1.5
     co_w = 1.8
