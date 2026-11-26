@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""#   #    #####     #####
-#  #   #       #     #
-# #    #     # #     #
+"""#   #    #####    #
+#  #   #       #   #
+# #    #     # #    #
 #  #   #      ##     #
-#   #    ##### ##  #####
+#   #    ##### ##     #
 
             r e f e r e n c e   d e c o d e r [v{VER}]
 KMI: "KQI Model for Images" (KQI Reference Software) decoder (dkqi)
