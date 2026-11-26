@@ -71,7 +71,7 @@ def make_alpha_chunk(ctype: str, plane: bytes):
     chk.extend(cdata)
     return chk
 
-def encode(src_img, quality: int = 80, *, alpha = True, subsample: bool = False, metadata: bool = True, comments: list = None, enc_params: str = "", description: str = None, license = None):
+def encode(src_img, quality: int = 80, *, alpha = True, subsample: bool = False, metadata: bool = True, comments: list = None, enc_params: str = "", description: str = None, license = None, diff_coeff = None):
     assert quality>=1 and quality<=100, "Image quality out of range"
     bits = bytearray(b'kqif') # kqif header bytes 0-3
     # get dimensions
@@ -131,8 +131,11 @@ def encode(src_img, quality: int = 80, *, alpha = True, subsample: bool = False,
     else:
         img_y, img_co, img_cg = rgb_to_ycocg_r(src_img, subsample=subsample)
 
-    qual_div = (sqrt(100 / quality)*10)-9 # adjust curve to be more.. sane
-    qd_coeff = qual_div-1
+    if diff_coeff is None:
+        qual_div = (sqrt(100 / quality)*10)-9 # adjust curve to be more.. sane
+        qd_coeff = qual_div-1
+    else:
+        qd_coeff = diff_coeff # set difference coefficient directly.
     y_w = 1.5
     co_w = 1.8
     cg_w = 1.9

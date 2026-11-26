@@ -67,6 +67,7 @@ enc_params = " ".join(sys.argv[3:])
 comments = []
 license = []
 description = None
+diff_coeff = None
 
 cli_args = []
 for arg in sys.argv[3:]:
@@ -94,6 +95,8 @@ for arg in cli_args:
         license.append("") # License Pretty Name
         license.append(" ".join(ls[2:])) # Author
         license.append(" ".join(ls[1:2])) # Year
+    if arg.startswith("--distance"):
+        diff_coeff = float(arg[11:])
 
 ppm_data = open(src, "rb").read()
 
@@ -115,7 +118,7 @@ else:
     raise ValueError("Unsupported import format!")
 
 print(f"Encoding [q{quality}, Entropy Effort: {effort}]")
-kqi_bytes = encode(input_bitmap, quality, subsample=subsample, alpha=alpha, metadata=metadata, enc_params=enc_params, comments=comments, description=description, license=license)
+kqi_bytes = encode(input_bitmap, quality, subsample=subsample, alpha=alpha, metadata=metadata, enc_params=enc_params, comments=comments, description=description, license=license, diff_coeff=diff_coeff)
 w, h = len(input_bitmap[0]), len(input_bitmap)
 print(f"Compressed to {len(kqi_bytes)} bytes ({round((len(kqi_bytes)*8)/(w*h), 3)} bpp) at {w} x {h}.")
 
