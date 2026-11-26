@@ -27,22 +27,31 @@ USAGE: {sys.argv[0]} input.[ppm/qoi/kqi] output.kqi [options...]
     the compressed KQI output file
 
 Basic options:
- -q=QUALITY
+ -q QUALITY
     Compression quality (1..100), Default 80
  -s
     Enable 4:2:0 Chroma Subsampling, smaller files but lower quality
- -e=EFFORT
-    !!Unimplemented!! scQOI2 Compression Effort
+ -e EFFORT
+    !!Unimplemented!! Set scQOI2 Compression Effort
+    Higher values give better compression without quality loss but are slower
 Advanced options:
- -u
-    !!Unimplemented!! Disable all metadata
- -a=FILE_PATH
+ -d DESCRIPTION
+    Embeds a description of the image into the file
+    This is usually unnecessary but can be helpful in certain cases
+ -l LICENSE
+    Embeds license information into the image
+    Layout: SPDX Copyright_Year Author_Name
+ -nm
+    Skip adding standard KQI metadata (File Creation time and Encoder information)
+ -a FILE_PATH
     !!Unimplemented!! Specify Alpha Channel (PGM)
     If unspecified, no alpha is added or it is derived from the input image
- -n
+ -na
     Ignore alpha channel on input image (implicit if -a is specified)
- -c=FILE_PATH
+ -i FILE_PATH
     !!Unimplemented!! Embed ICC Color Profile into image
+ -c COMMENT
+    Add a comment into the KQI bitstream
 """)
     sys.exit()
 
@@ -51,15 +60,40 @@ out = sys.argv[2]
 
 subsample = False
 alpha = True
+metadata = True
 effort = None
 quality = 80
+enc_params = " ".join(sys.argv[3:])
+comments = []
+license = []
+description = None
+
+cli_args = []
 for arg in sys.argv[3:]:
+    if arg.startswith("-"):
+        cli_args.append(arg)
+    else:
+        cli_args[-1]+=" "+arg
+
+for arg in cli_args:
     if arg.startswith("-s"):
         subsample = True
-    if arg.startswith("-q="):
+    if arg.startswith("-q"):
         quality = int(arg[3:])
-    if arg.startswith("-n"):
+    if arg.startswith("-na"):
         alpha = False
+    if arg.startswith("-nm"):
+        metadata = False
+    if arg.startswith("-c"):
+        comments.append(arg[3:])
+    if arg.startswith("-d"):
+        description = arg[3:]
+    if arg.startswith("-l"):
+        ls = arg[3:].split()
+        license.append(" ".join(ls[0:1])) # SPDX
+        license.append("") # License Pretty Name
+        license.append(" ".join(ls[2:])) # Author
+        license.append(" ".join(ls[1:2])) # Year
 
 ppm_data = open(src, "rb").read()
 
@@ -80,8 +114,8 @@ elif input_format in ("PPM", "PGM"):
 else:
     raise ValueError("Unsupported import format!")
 
-print(f"Encoding [Input: {input_format}, q{quality}, effort: {effort}]")
-kqi_bytes = encode(input_bitmap, quality, subsample=subsample, alpha=alpha)
+print(f"Encoding [q{quality}, Entropy Effort: {effort}]")
+kqi_bytes = encode(input_bitmap, quality, subsample=subsample, alpha=alpha, metadata=metadata, enc_params=enc_params, comments=comments, description=description, license=license)
 w, h = len(input_bitmap[0]), len(input_bitmap)
 print(f"Compressed to {len(kqi_bytes)} bytes ({round((len(kqi_bytes)*8)/(w*h), 3)} bpp) at {w} x {h}.")
 
