@@ -32,13 +32,13 @@ Basic options:
  -s
     Enable 4:2:0 Chroma Subsampling, smaller files but lower quality
  -e=EFFORT
-    !!Unimplemented!! scQOI2 Compresson Effort
+    !!Unimplemented!! scQOI2 Compression Effort
 Advanced options:
  -u
     !!Unimplemented!! Disable all metadata
  -a=FILE_PATH
     !!Unimplemented!! Specify Alpha Channel (PGM)
-    If unspecified, no alpha is added or it is derrived fron the input image
+    If unspecified, no alpha is added or it is derived from the input image
  -n
     Ignore alpha channel on input image (implicit if -a is specified)
  -c=FILE_PATH
