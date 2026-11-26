@@ -17,7 +17,7 @@ def rev_haar_transform(s, h, v, d):
 def clamp(i, m, n):
     return min(max(i, m), n)
 
-def haar_on_plane(chunkimg, wd, hd):
+def haar_on_plane(chunkimg, wd, hd, qw = None):
     si = []
     hi = []
     vi = []
@@ -25,6 +25,20 @@ def haar_on_plane(chunkimg, wd, hd):
 
     for p in chunkimg:
         s, h, v, d = haar_transform(p[0], p[1], p[2], p[3])
+        if qw and len(qw) == 4:
+            if qw[0]:
+                s = round(s/qw[0])
+                s = clamp(round(s*qw[0]), 0, 1020)
+            if qw[1]:
+                h = round(h/qw[1])
+                h = clamp(round(h*qw[1]), -510, 510)
+            if qw[2]:
+                v = round(v/qw[2])
+                v = clamp(round(v*qw[2]), -510, 510)
+            if qw[3]:
+                d = round(d/qw[3])
+                d = clamp(round(d*qw[3]), -510, 510)
+
         si.append(round((s/4)))
         hi.append(compand(h)),
         vi.append(compand(v)),

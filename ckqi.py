@@ -28,7 +28,7 @@ USAGE: {sys.argv[0]} input.[ppm/qoi/kqi] output.kqi [options...]
 
 Basic options:
  -q=QUALITY
-    !!Unimplemented!! Compression quality (0..100), Default
+    Compression quality (0..100), Default 80
  -s
     Enable 4:2:0 Chroma Subsampling, smaller files but lower quality
  -e=EFFORT
@@ -52,10 +52,12 @@ out = sys.argv[2]
 subsample = False
 alpha = True
 effort = None
-quality = 100
+quality = 80
 for arg in sys.argv[3:]:
     if arg.startswith("-s"):
         subsample = True
+    if arg.startswith("-q="):
+        quality = int(arg[3:])
     if arg.startswith("-n"):
         alpha = False
 
@@ -79,8 +81,8 @@ else:
     raise ValueError("Unsupported import format!")
 
 print(f"Encoding [Input: {input_format}, q{quality}, effort: {effort}]")
-kqi_bytes = encode(input_bitmap, subsample=subsample, alpha=alpha)
+kqi_bytes = encode(input_bitmap, quality, subsample=subsample, alpha=alpha)
 w, h = len(input_bitmap[0]), len(input_bitmap)
-print(f"Compressed to {len(kqi_bytes)} bytes ({round(len(kqi_bytes)/(w*h), 3)} bpp) at {w} x {h}.")
+print(f"Compressed to {len(kqi_bytes)} bytes ({round((len(kqi_bytes)*8)/(w*h), 3)} bpp) at {w} x {h}.")
 
 open(out, "wb").write(kqi_bytes)

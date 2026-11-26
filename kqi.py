@@ -15,11 +15,14 @@ from huffman import huffman_enc, huffman_dec
 from scqoi2 import compress, decompress
 from ppmgen import get_alpha, gal_pack
 
-def kqi_haar_plane(channel, img_w, img_h, img_hw, img_hh):
+def kqi_haar_plane(channel, img_w, img_h, img_hw, img_hh, q, chw, sbw):
+    out_w = [None, 1+(q*chw*sbw[4]), 1+(q*chw*sbw[5]), 1+(q*chw*sbw[6])]
+    in_w = [1+(q*chw*sbw[0]), 1+(q*chw*sbw[1]), 1+(q*chw*sbw[2]), 1+(q*chw*sbw[3])]
+
     chunked_image = bitmap_to_chunkmap(channel)
-    s, h, v, d = haar_on_plane(chunked_image, img_w, img_h)
+    s, h, v, d = haar_on_plane(chunked_image, img_w, img_h, out_w)
     chunked_s = flat_bitmap_to_chunkmap(s, img_hw, img_hh)
-    ss, sh, sv, sd = haar_on_plane(chunked_s, img_hw, img_hh)
+    ss, sh, sv, sd = haar_on_plane(chunked_s, img_hw, img_hh, in_w)
     return ss, sh, sv, sd, h, v, d
 
 def flatten(lst):
@@ -67,7 +70,8 @@ def make_alpha_chunk(ctype: str, plane: bytes):
     chk.extend(cdata)
     return chk
 
-def encode(src_img, *, alpha = True, subsample = False):
+def encode(src_img, quality: int = 80, *, alpha = True, subsample = False):
+    assert quality>=1 and quality<=100, "Image quality out of range"
     bits = bytearray(b'kqif') # kqif header bytes 0-3
     # get dimensions
     img_w = len(src_img[0])
@@ -117,14 +121,21 @@ def encode(src_img, *, alpha = True, subsample = False):
     else:
         img_y, img_co, img_cg = rgb_to_ycocg_r(src_img, subsample=subsample)
 
+    qual_div = 100 / quality
+    qd_coeff = qual_div-1
+    y_w = 1.5
+    co_w = 1.8
+    cg_w = 1.9
+    subband_w = [0.4, 0.85, 0.85, 1.35, 1.9, 1.9, 2.2]
+
     # transform to haar stuffs -- note: please make it support grayscale later
     # yss, ysh, ysv, ysd, yh, yv, yd
-    y_sb = kqi_haar_plane(img_y, img_w, img_h, img_hw, img_hh)
+    y_sb = kqi_haar_plane(img_y, img_w, img_h, img_hw, img_hh, qd_coeff, y_w, subband_w)
     if not grayscale:
         # coss, cosh, cosv, cosd, coh, cov, cod
-        co_sb = kqi_haar_plane(img_co, cimg_w, cimg_h, cimg_hw, cimg_hh)
+        co_sb = kqi_haar_plane(img_co, cimg_w, cimg_h, cimg_hw, cimg_hh, qd_coeff, co_w, subband_w)
         # cgss, cgsh, cgsv, cgsd, cgh, cgv, cgd
-        cg_sb = kqi_haar_plane(img_cg, cimg_w, cimg_h, cimg_hw, cimg_hh)
+        cg_sb = kqi_haar_plane(img_cg, cimg_w, cimg_h, cimg_hw, cimg_hh, qd_coeff, cg_w, subband_w)
 
     if alpha:
         bits.extend(make_alpha_chunk("L", img_a))
