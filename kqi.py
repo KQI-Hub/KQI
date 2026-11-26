@@ -6,6 +6,7 @@ Reference Implementation of the KQ Image codec.
 VER = "0.0.0"
 
 from datetime import datetime, timezone # for KQI timestamping
+from math import sqrt
 
 import mcv
 from ycocg import rgb_to_ycocg_r, ycocg_r_to_rgb
@@ -130,7 +131,7 @@ def encode(src_img, quality: int = 80, *, alpha = True, subsample: bool = False,
     else:
         img_y, img_co, img_cg = rgb_to_ycocg_r(src_img, subsample=subsample)
 
-    qual_div = (100 / quality)**1.8 # adjust curve to be more.. curved
+    qual_div = (sqrt(100 / quality)*10)-9 # adjust curve to be more.. sane
     qd_coeff = qual_div-1
     y_w = 1.5
     co_w = 1.8
