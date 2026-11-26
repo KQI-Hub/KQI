@@ -28,7 +28,7 @@ USAGE: {sys.argv[0]} input.[ppm/qoi/kqi] output.kqi [options...]
 
 Basic options:
  -q=QUALITY
-    Compression quality (0..100), Default 80
+    Compression quality (1..100), Default 80
  -s
     Enable 4:2:0 Chroma Subsampling, smaller files but lower quality
  -e=EFFORT
