@@ -20,13 +20,11 @@ def load(mcv: str, strict_parsing: bool = False):
     dictionary = {}
     for pair in splitfile:
         splittup = pair.split("=", 1)
+        if not len(splittup) == 2:
+            splittup.append('')
+
         if not pair or pair[0] == "#":
             continue
-        elif not len(splittup) == 2:
-            if strict_parsing:
-                raise ValueError("Valueless key in MCV")
-            else:
-                print("Warning: Valueless key found, ignoring")
         else:
             if splittup[0] in dictionary:
                 if strict_parsing:

@@ -113,7 +113,7 @@ def encode(src_img, quality: int = 80, *, alpha = True, subsample: bool = False,
          channels -=2
     bits.append(channels) # channels count, byte 12
 
-    bits.append(0) # colorspace, 0=sRGB+lA; 1=lRGBA; 2=ICC Chunk, byte 13
+    bits.append(bool(icc)*2) # colorspace, 0=sRGB+lA; 1=lRGBA; 2=ICC Chunk, byte 13
     bits.append(int(subsample)) # subsampling mode, 0=4:4:4, 1=4:2:0; byte 14
     bits.append(0) # reserved/padding, byte 15
 
@@ -178,6 +178,7 @@ def decode(kqi_bytes: bytes, *, verbose = False):
     img_w = int.from_bytes(kqi_bytes[4:8], "little")
     img_h = int.from_bytes(kqi_bytes[8:12], "little")
     channels = kqi_bytes[12]
+    colorspace = kqi_bytes[13]
     is_subsampled = bool(kqi_bytes[14])
     iscolor = channels > 2
 
