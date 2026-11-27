@@ -49,7 +49,7 @@ Advanced options:
  -na
     Ignore alpha channel on input image (implicit if -a is specified)
  -i FILE_PATH
-    !!Unimplemented!! Embed ICC Color Profile into image
+    Embed ICC Color Profile into image
  -c COMMENT
     Add a comment into the KQI bitstream
 """)
@@ -68,6 +68,7 @@ comments = []
 license = []
 description = None
 diff_coeff = None
+icc_profile = None
 
 cli_args = []
 for arg in sys.argv[3:]:
@@ -97,6 +98,9 @@ for arg in cli_args:
         license.append(" ".join(ls[1:2])) # Year
     if arg.startswith("--distance"):
         diff_coeff = float(arg[11:])
+    if arg.startswith("-i"):
+        with open(arg[3:], 'rb') as f:
+            icc_profile = f.read()
 
 ppm_data = open(src, "rb").read()
 
@@ -118,7 +122,7 @@ else:
     raise ValueError("Unsupported import format!")
 
 print(f"Encoding [q{quality}, Entropy Effort: {effort}]")
-kqi_bytes = encode(input_bitmap, quality, subsample=subsample, alpha=alpha, metadata=metadata, enc_params=enc_params, comments=comments, description=description, license=license, diff_coeff=diff_coeff)
+kqi_bytes = encode(input_bitmap, quality, subsample=subsample, alpha=alpha, metadata=metadata, enc_params=enc_params, comments=comments, description=description, license=license, diff_coeff=diff_coeff, icc=icc_profile)
 w, h = len(input_bitmap[0]), len(input_bitmap)
 print(f"Compressed to {len(kqi_bytes)} bytes ({round((len(kqi_bytes)*8)/(w*h), 3)} bpp) at {w} x {h}.")
 
