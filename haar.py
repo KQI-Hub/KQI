@@ -8,6 +8,15 @@ def haar_transform(a, b, c, d):
     return s, h, v, d
 
 def rev_haar_transform(s, h, v, d):
+    if s is None:
+        s = 0
+    if h is None:
+        h = 0
+    if v is None:
+        v = 0
+    if d is None:
+        d = 0
+
     a = s-h-v-d
     b = s+h-(v-d)
     c = s-h+(v+d)
@@ -49,7 +58,11 @@ def haar_on_plane(chunkimg, wd, hd, qw = None):
 def unhaar_plane(si, hi, vi, di):
     r = []
     for c in range(len(si)):
-        s, h, v, d = si[c]*4, companded_table[hi[c]], companded_table[vi[c]], companded_table[di[c]]
+        s = si[c]*4 if si else None
+        h = companded_table[hi[c]] if hi else None
+        v = companded_table[vi[c]] if vi else None
+        d = companded_table[di[c]] if di else None
+
         a, b, c, d = rev_haar_transform(s, h, v, d)
         a, b, c, d = round(a/4), round(b/4), round(c/4), round(d/4)
         r.append([clamp(a, 0, 255), clamp(b, 0, 255), clamp(c, 0, 255), clamp(d, 0, 255)])
