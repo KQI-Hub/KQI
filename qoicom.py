@@ -209,4 +209,8 @@ def decode(qoi: bytes, raw_qoi: bool = False, width: int = None, height: int = N
             except Exception:
                 print("decoding error, failing! (likely premature stream termination)")
                 return listmap
+    if channels == 3:
+        for y in range(height):
+            for x in range(width):
+                listmap[y][x] = (listmap[y][x][0], listmap[y][x][1], listmap[y][x][2]) # discard alpha channel
     return listmap
