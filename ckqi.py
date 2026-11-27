@@ -44,7 +44,7 @@ Advanced options:
  -nm
     Skip adding standard KQI metadata (File Creation time and Encoder information)
  -a FILE_PATH
-    !!Unimplemented!! Specify Alpha Channel (PGM)
+    Specify Alpha Channel (PGM)
     If unspecified, no alpha is added or it is derived from the input image
  -na
     Ignore alpha channel on input image (implicit if -a is specified)
@@ -84,6 +84,12 @@ for arg in cli_args:
         quality = int(arg[3:])
     if arg.startswith("-na"):
         alpha = False
+    if arg.startswith("-a"):
+        with open(arg[3:], 'rb') as f:
+            alph_plane = f.read()
+            assert alph_plane.startswith(b'P5'), "Only PGM is accepted as alpha plane"
+            alpha = ppm_to_list(alph_plane)
+
     if arg.startswith("-nm"):
         metadata = False
     if arg.startswith("-c"):

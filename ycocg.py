@@ -78,7 +78,7 @@ def ycocg_r_to_rgb(y: list, co: list, cg: list, al: list = None, subsampled=Fals
             B = max(0, min(255, B))
 
             if al:
-                img[-1].append((R,G,B,al[(len(y)*rwi)+pxi]))
+                img[-1].append((R,G,B,al[rwi*len(y[0]) + pxi]))
             else:
                 img[-1].append((R,G,B))
     return img
