@@ -55,9 +55,11 @@ def haar_on_plane(chunkimg, wd, hd, qw = None):
 
     return si, hi, vi, di
 
-def unhaar_plane(si, hi, vi, di):
+def unhaar_plane(si, hi, vi, di, idat_len = None):
+    if idat_len is None:
+        idat_len = len(si)
     r = []
-    for c in range(len(si)):
+    for c in range(idat_len):
         s = si[c]*4 if si else None
         h = companded_table[hi[c]] if hi else None
         v = companded_table[vi[c]] if vi else None

@@ -16,6 +16,18 @@ from huffman import huffman_enc, huffman_dec
 from scqoi2 import compress, decompress
 from ppmgen import get_alpha, gal_pack
 
+def sparse_check(plane: list, sparse_val: int, flat: bool = True):
+    if flat:
+        for px in plane:
+            if px != sparse_val:
+                return False
+    else:
+        for r in plane:
+            for px in r:
+                if px != sparse_val:
+                    return False
+    return True
+
 def kqi_haar_plane(channel, img_w, img_h, img_hw, img_hh, q, chw, sbw):
     out_w = [None, 1+(q*chw*sbw[4]), 1+(q*chw*sbw[5]), 1+(q*chw*sbw[6])]
     in_w = [1+(q*chw*sbw[0]), 1+(q*chw*sbw[1]), 1+(q*chw*sbw[2]), 1+(q*chw*sbw[3])]
@@ -101,6 +113,11 @@ def encode(src_img, quality: int = 80, *, alpha = True, subsample: bool = False,
     img_a = None
     if alpha is True:
         img_a = get_alpha(src_img)
+        if type(img_a) is list and sparse_check(img_a, 255, False):
+            img_a = None
+            alpha = False # disable alpha if it has no purpose
+        else:
+            alpha = False
     elif type(alpha) is list:
         img_a = alpha
     if not img_a:
@@ -162,12 +179,22 @@ def encode(src_img, quality: int = 80, *, alpha = True, subsample: bool = False,
 
     if grayscale:
         for sbt, sby in enumerate(y_sb):
-            bits.extend(make_subband_chunk("Y", sby, sbt))
+            sp = sparse_check(sby, 0) if sbt == 0 else sparse_check(sby, 127)
+            if not sp:
+                bits.extend(make_subband_chunk("Y", sby, sbt))
     else:
         for sbt, (sby, sbco, sbcg) in enumerate(zip(y_sb, co_sb, cg_sb)):
-            bits.extend(make_subband_chunk("Y", sby, sbt))
-            bits.extend(make_subband_chunk("O", sbco, sbt))
-            bits.extend(make_subband_chunk("G", sbcg, sbt))
+            spy = sparse_check(sby, 0) if sbt == 0 else sparse_check(sby, 127)
+            if not spy:
+                bits.extend(make_subband_chunk("Y", sby, sbt))
+
+            spco = sparse_check(sbco, 0) if sbt == 0 else sparse_check(sbco, 127)
+            if not spco:
+                bits.extend(make_subband_chunk("O", sbco, sbt))
+
+            spcg = sparse_check(sbcg, 0) if sbt == 0 else sparse_check(sbcg, 127)
+            if not spcg:
+                bits.extend(make_subband_chunk("G", sbcg, sbt))
 
     bits.extend(b'eF') # EoF Marker
     return bits
@@ -183,14 +210,16 @@ def decode(kqi_bytes: bytes, *, verbose = False):
     iscolor = channels > 2
 
     img_hw, img_hh = (img_w+1)//2, (img_h+1)//2
+    img_sbl = ((img_hw+1)//2)*((img_hh+1)//2)
     y_sb, co_sb, cg_sb = [None]*7, [None]*7, [None]*7
     alph = None
 
     if is_subsampled:
         cimg_w, cimg_h = img_hw, img_hh
         cimg_hw, cimg_hh = (img_hw+1)//2, (img_hh+1)//2
+        cimg_sbl = ((cimg_hw+1)//2)*((cimg_hh+1)//2)
     else:
-        cimg_w, cimg_h, cimg_hw, cimg_hh = img_w, img_h, img_hw, img_hh
+        cimg_w, cimg_h, cimg_hw, cimg_hh, cimg_sbl = img_w, img_h, img_hw, img_hh, img_sbl
 
     bw = 16 # start at the start of the 1st chunk
     while True:
@@ -224,18 +253,18 @@ def decode(kqi_bytes: bytes, *, verbose = False):
             if verbose:
                 print(TwoCC, chk_len) # simply print unknown chunk statistics
         bw+=chk_len+8
-    yds = unhaar_plane(y_sb[0], y_sb[1], y_sb[2], y_sb[3])
+    yds = unhaar_plane(y_sb[0], y_sb[1], y_sb[2], y_sb[3], img_sbl)
     yds = flatten(chunkmap_to_bitmap(yds, img_hw, img_hh))
     cdimg = unhaar_plane(yds, y_sb[4], y_sb[5], y_sb[6])
     dimg_y = chunkmap_to_bitmap(cdimg, img_w, img_h)
 
     if iscolor:
-        cods = unhaar_plane(co_sb[0], co_sb[1], co_sb[2], co_sb[3])
+        cods = unhaar_plane(co_sb[0], co_sb[1], co_sb[2], co_sb[3], cimg_sbl)
         cods = flatten(chunkmap_to_bitmap(cods, cimg_hw, cimg_hh))
         cdimg = unhaar_plane(cods, co_sb[4], co_sb[5], co_sb[6])
         dimg_co = chunkmap_to_bitmap(cdimg, cimg_w, cimg_h)
 
-        cgds = unhaar_plane(cg_sb[0], cg_sb[1], cg_sb[2], cg_sb[3])
+        cgds = unhaar_plane(cg_sb[0], cg_sb[1], cg_sb[2], cg_sb[3], cimg_sbl)
         cgds = flatten(chunkmap_to_bitmap(cgds, cimg_hw, cimg_hh))
         cdimg = unhaar_plane(cgds, cg_sb[4], cg_sb[5], cg_sb[6])
         dimg_cg = chunkmap_to_bitmap(cdimg, cimg_w, cimg_h)
