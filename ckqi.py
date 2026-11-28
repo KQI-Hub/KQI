@@ -32,8 +32,8 @@ Basic options:
  -s
     Enable 4:2:0 Chroma Subsampling, smaller files but lower quality
  -e EFFORT
-    !!Unimplemented!! Set scQOI2 Compression Effort
-    Higher values give better compression without quality loss but are slower
+    Set scQOI2 Compression Effort
+    Higher values typically give better compression without quality loss but are slower
 Advanced options:
  -d DESCRIPTION
     Embeds a description of the image into the file
@@ -61,7 +61,7 @@ out = sys.argv[2]
 subsample = False
 alpha = True
 metadata = True
-effort = None
+effort = 2
 quality = 80
 enc_params = " ".join(sys.argv[3:])
 comments = []
@@ -82,6 +82,8 @@ for arg in cli_args:
         subsample = True
     if arg.startswith("-q"):
         quality = int(arg[3:])
+    if arg.startswith("-e"):
+        effort = int(arg[3:])
     if arg.startswith("-na"):
         alpha = False
     if arg.startswith("-a"):
@@ -128,7 +130,7 @@ else:
     raise ValueError("Unsupported import format!")
 
 print(f"Encoding [q{quality}, Entropy Effort: {effort}]")
-kqi_bytes = encode(input_bitmap, quality, subsample=subsample, alpha=alpha, metadata=metadata, enc_params=enc_params, comments=comments, description=description, license=license, diff_coeff=diff_coeff, icc=icc_profile)
+kqi_bytes = encode(input_bitmap, quality, subsample=subsample, alpha=alpha, metadata=metadata, enc_params=enc_params, comments=comments, description=description, license=license, diff_coeff=diff_coeff, icc=icc_profile, effort=effort)
 w, h = len(input_bitmap[0]), len(input_bitmap)
 print(f"Compressed to {len(kqi_bytes)} bytes ({round((len(kqi_bytes)*8)/(w*h), 3)} bpp) at {w} x {h}.")
 

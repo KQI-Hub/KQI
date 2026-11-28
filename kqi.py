@@ -60,13 +60,13 @@ def make_text_chunk(ctype: str, cdata: str):
     chk.extend(cdata)
     return chk
 
-def make_subband_chunk(ctype: str, plane: bytes, subband: int):
+def make_subband_chunk(ctype: str, plane: bytes, subband: int, effort: int):
     if len(ctype) != 1:
         raise ValueError("Chunk Type must be exactly 1!")
     chk = bytearray(f's{ctype}'.encode('ascii'))
 
     cdata = bytearray([subband]) # 0 is sum-sum, 1 is sum-hdiff, 2 is sum-vdiff, 3 is sum-diag, 4 is hdiff, 5 is vdiff, and 6 is diag
-    scq2plane = compress(plane, do_diff=False) # scQOI2 compression
+    scq2plane = compress(plane, effort) # scQOI2 compression
     huffcoded = huffman_enc(scq2plane) # Huffman coding
     cdata.extend(huffcoded)
 
@@ -74,21 +74,21 @@ def make_subband_chunk(ctype: str, plane: bytes, subband: int):
     chk.extend(cdata)
     return chk
 
-def make_alpha_chunk(ctype: str, plane: bytes):
+def make_alpha_chunk(ctype: str, plane: bytes, effort: int):
     if len(ctype) != 1:
         raise ValueError("Chunk Type must be exactly 1!")
     chk = bytearray(f'a{ctype}'.encode('ascii'))
 
     plane = bytes(flatten(plane))
 
-    scq2plane = compress(plane, do_diff=False) # scQOI2 compression
+    scq2plane = compress(plane, effort) # scQOI2 compression
     cdata = huffman_enc(scq2plane) # Huffman coding
 
     chk.extend(len(cdata).to_bytes(6, 'little'))
     chk.extend(cdata)
     return chk
 
-def encode(src_img, quality: int = 80, *, alpha = True, subsample: bool = False, metadata: bool = True, comments: list = None, enc_params: str = "", description: str = None, license = None, diff_coeff = None, icc: bytes = None):
+def encode(src_img, quality: int = 80, *, alpha = True, subsample: bool = False, metadata: bool = True, comments: list = None, enc_params: str = "", description: str = None, license = None, diff_coeff = None, icc: bytes = None, effort: int = 2):
     assert quality>=1 and quality<=100, "Image quality out of range"
     bits = bytearray(b'kqif') # kqif header bytes 0-3
     # get dimensions
@@ -175,26 +175,26 @@ def encode(src_img, quality: int = 80, *, alpha = True, subsample: bool = False,
         cg_sb = kqi_haar_plane(img_cg, cimg_w, cimg_h, cimg_hw, cimg_hh, qd_coeff, cg_w, subband_w)
 
     if alpha:
-        bits.extend(make_alpha_chunk("L", img_a))
+        bits.extend(make_alpha_chunk("L", img_a, effort))
 
     if grayscale:
         for sbt, sby in enumerate(y_sb):
             sp = sparse_check(sby, 0) if sbt == 0 else sparse_check(sby, 127)
             if not sp:
-                bits.extend(make_subband_chunk("Y", sby, sbt))
+                bits.extend(make_subband_chunk("Y", sby, sbt, effort))
     else:
         for sbt, (sby, sbco, sbcg) in enumerate(zip(y_sb, co_sb, cg_sb)):
             spy = sparse_check(sby, 0) if sbt == 0 else sparse_check(sby, 127)
             if not spy:
-                bits.extend(make_subband_chunk("Y", sby, sbt))
+                bits.extend(make_subband_chunk("Y", sby, sbt, effort))
 
             spco = sparse_check(sbco, 0) if sbt == 0 else sparse_check(sbco, 127)
             if not spco:
-                bits.extend(make_subband_chunk("O", sbco, sbt))
+                bits.extend(make_subband_chunk("O", sbco, sbt, effort))
 
             spcg = sparse_check(sbcg, 0) if sbt == 0 else sparse_check(sbcg, 127)
             if not spcg:
-                bits.extend(make_subband_chunk("G", sbcg, sbt))
+                bits.extend(make_subband_chunk("G", sbcg, sbt, effort))
 
     bits.extend(b'eF') # EoF Marker
     return bits

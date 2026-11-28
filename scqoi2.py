@@ -1,14 +1,13 @@
 # scQOI2 - Simple compression algorithm
 # scQOI2 uses simple, low complexity backreferences and differential RLE
 
+from huffman import huffman_enc
+
 def emit_buffer(data: bytes):
     r = bytes([192+len(data)-1])
     return r+data
 
-"""
-Sample encoder that makes a minimum viable scQOI2 file
-
-def compress(data: bytes):
+def compress_e0(data: bytes): # Effort 0
     bytes_table = [bytearray([32]), bytearray([0])]*32 # initialize to ascii space and null, which I think are useful
     compressed_data = bytearray()
     byte_buffer = bytearray()
@@ -29,14 +28,10 @@ def compress(data: bytes):
     if byte_buffer:
         compressed_data.extend(emit_buffer(byte_buffer)) # flush
 
-    print(bytes_table)
+    #print(bytes_table)
     return compressed_data
-"""
 
-"""
-Sample encoder that does sequence matching
-
-def compress(data: bytes):
+def compress_e1(data: bytes): # Sample encoder that does sequence matching
     bytes_table = [bytearray([32]), bytearray([0])]*32 # initialize to ascii space and null, which I think are useful
     table_item_lengths = [1]*64 # initialize to 1
 
@@ -48,8 +43,8 @@ def compress(data: bytes):
         found_match = False
         b = data[seek]
 
-        print(bytes_table)
-        print(data[seek:seek+3])
+        #print(bytes_table)
+        #print(data[seek:seek+3])
         for length in reversed(sorted(set(table_item_lengths))):
             if data[seek:seek+length] in bytes_table[1:]: # ignore oldest entry, it gets killed :3
                 found_match = True
@@ -71,9 +66,8 @@ def compress(data: bytes):
     if byte_buffer:
         compressed_data.extend(emit_buffer(byte_buffer)) # flush
 
-    print(bytes_table)
+    #print(bytes_table)
     return compressed_data
-"""
 
 def flush_to_table(byte_buffer, bytes_table, compressed_data, table_item_lengths):
     if not bytes(byte_buffer) in bytes_table: # avoid duplicating table entries
@@ -85,7 +79,7 @@ def flush_to_table(byte_buffer, bytes_table, compressed_data, table_item_lengths
     compressed_data.extend(emit_buffer(byte_buffer))
     return bytearray()
 
-def compress(data: bytes, do_diff: bool = True): # diff usually reduces size but it makes encoding slower
+def compress_e2(data: bytes, do_diff: bool = True): # diff usually reduces size but it makes encoding slower
     bytes_table = [bytearray([32]), bytearray([0])]*32 # initialize to ascii space and null, which I think are useful
     table_item_lengths = [1]*64 # initialize to 1
 
@@ -166,6 +160,26 @@ def compress(data: bytes, do_diff: bool = True): # diff usually reduces size but
         compressed_data.extend(emit_buffer(byte_buffer)) # flush
 
     return compressed_data
+
+def compress(data: bytes, effort: int = 2):
+    if effort == 0:
+        return compress_e0(data)
+    if effort == 1:
+        return compress_e1(data)
+    if effort == 2:
+        return compress_e2(data, False)
+    if effort == 3:
+        return compress_e2(data, True)
+    if effort == 4: # max effort, try all lower options and huffman encodes them to find the smallest. very slow.
+        candidates = [
+            compress_e0(data),
+            compress_e1(data),
+            compress_e2(data, False),
+            compress_e2(data, True)
+        ]
+
+        return min(candidates, key=lambda candidate: len(huffman_enc(candidate)))
+    raise ValueError("Invalid Effort Value")
 
 def decompress(data: bytes):
     bytes_table = [bytearray([32]), bytearray([0])]*32 # initialize to ascii space and null, which I think are useful
